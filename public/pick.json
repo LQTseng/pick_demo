@@ -64,8 +64,11 @@
                     "box_no": "#1",
                     "skus": [
                         {
-                            "sku": "3",
-                            "in_box_qty": ""
+                            "sku": "SKU-3",
+                            "pic": "",
+                            "name": "商品名称3",
+                            "order_qty": 100,
+                            "in_box_qty": 0
                         }
                     ],
                     "weight": 0,

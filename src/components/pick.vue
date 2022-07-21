@@ -53,7 +53,7 @@
                                         :value="box"
                                     />
                                 </el-select>
-                                <el-input v-model="inputSKU" placeholder="请扫入SKU" @keyup.enter.native="checkSKU"
+                                <el-input v-model="inputSKU" placeholder="请扫入SKU" @keyup.enter.native="addSKU"
                                           clearable/>
                                 <el-button color="#3A63F5" plain>选择商品</el-button>
                             </el-space>
@@ -72,6 +72,45 @@
                             <el-input placeholder="请输入数量" clearable/>
                         </el-descriptions-item>
                     </el-descriptions>
+                    <el-tabs
+                        v-model="box"
+                        type="border-card"
+                        editable
+                        @edit="handleBoxesEdit"
+                    >
+                        <el-tab-pane
+                            v-for="box in order.boxes"
+                            :key="box.box_no"
+                            :label="box.box_no"
+                            :name="box"
+                        >
+                            <el-table :data="box.skus" :span-method="objectSpanMethod" highlight-current-row border>
+                                <el-table-column label="箱号" width="100">
+                                    {{ box.box_no }}
+                                </el-table-column>
+                                <el-table-column prop="pic" label="商品图片" width="100">
+                                    <template #default="scope">
+                                        <el-image :src="scope.row.pic" fit="cover"/>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="name" label="商品名称"/>
+                                <el-table-column prop="sku" label="SKU" width="150"/>
+                                <el-table-column prop="order_qty" label="下单数量" width="150"/>
+                                <el-table-column prop="in_box_qty" label="装箱数量" width="150"/>
+                                <el-table-column label="装箱状态" width="100">
+                                    <template #default="scope">
+                                        <span v-if="scope.row.order_qty===scope.row.in_box_qty">装箱完成</span>
+                                        <span v-else>装箱中</span>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="name" label="操作" width="100">
+                                    <template #default="scope">
+                                        <el-button type="primary" @click="removeItem(scope.row.sku)" text>删除</el-button>
+                                    </template>
+                                </el-table-column>
+                            </el-table>
+                        </el-tab-pane>
+                    </el-tabs>
                 </el-card>
                 <el-card shadow="never">
                     <el-descriptions title="包裹装箱" border>
@@ -160,7 +199,7 @@ export default {
     name: "pick",
     data() {
         return {
-            query: '',
+            query: 'PK00001',
             pickDetail: {
                 orders: []
             },
@@ -190,13 +229,62 @@ export default {
                 }
             }
         },
-        checkSKU() {
+        addSKU() {
             let res = this.box.skus.some(item => {
                 return item.sku === this.inputSKU
             })
-            if (!res) {
-                this.$message({message: 'SKU不存在！', type: 'error', showClose: true});
+            if (res) {
+                this.$message({message: 'SKU已存在！', type: 'error', showClose: true});
+            } else {
+                this.box.skus.push({
+                    sku: this.inputSKU,
+                    pic: "",
+                    name: "商品名称",
+                    order_qty: 100,
+                    in_box_qty: 0
+                })
             }
+        },
+        handleBoxesEdit(box, action) {
+            if (action === 'add') {
+                this.order.boxes.push({box_no: "#" + (this.order.boxes.length + 1), skus: []})
+            } else if (action === 'remove') {
+                this.order.boxes = this.order.boxes.filter(value => {
+                    return value.box_no !== box.box_no
+                })
+            }
+        },
+        objectSpanMethod({row, column, rowIndex, columnIndex,}) {
+            if (columnIndex === 0) {
+                if (rowIndex === 0) {
+                    return {
+                        rowspan: this.box.skus.length,
+                        colspan: 1,
+                    }
+                } else {
+                    return {
+                        rowspan: 0,
+                        colspan: 0,
+                    }
+                }
+            }
+        },
+        async removeItem(sku) {
+            await this.$confirm(
+                "是否删除该商品？",
+                "提示",
+                {
+                    confirmButtonText: '确认',
+                    cancelButtonText: '取消',
+                    type: 'warning',
+                }
+            ).then(async () => {
+                this.box.skus = this.box.skus.filter(value => {
+                    return value.sku !== sku
+                })
+            }).catch(() => {
+                this.$message({message: "删除操作已取消", type: 'info', showClose: true});
+            })
         }
     },
     computed: {
@@ -263,6 +351,10 @@ export default {
     width: 50px;
     height: 54px;
     background: #EAEDEF;
+}
+
+.el-table {
+    --el-table-row-hover-bg-color: var(--el-transfer-border-color);
 }
 
 .el-descriptions .el-descriptions {
